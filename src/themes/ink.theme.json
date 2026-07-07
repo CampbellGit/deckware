@@ -1,0 +1,17 @@
+{
+  "name": "ink",
+  "label": "Ink (dark)",
+  "extends": "minimal",
+  "vars": {
+    "--color-bg": "#0f1115",
+    "--color-fg": "#e8e8ea",
+    "--color-muted": "#9aa0aa",
+    "--color-accent": "#7aa2ff",
+    "--color-rule": "#2a2e37",
+    "--color-code-bg": "#1a1d24",
+    "--color-primary": "#7aa2ff",
+    "--color-success": "#4ade80",
+    "--color-warning": "#fbbf24",
+    "--color-danger": "#f87171"
+  }
+}

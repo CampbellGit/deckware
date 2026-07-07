@@ -1,0 +1,21 @@
+{
+  "name": "indigo",
+  "label": "Indigo",
+  "extends": "minimal",
+  "googleFonts": ["Josefin Sans", "Inter"],
+  "vars": {
+    "--font-heading": "'Josefin Sans', system-ui, sans-serif",
+    "--font-body": "'Inter', system-ui, sans-serif",
+    "--color-bg": "#ffffff",
+    "--color-fg": "#111111",
+    "--color-muted": "#5a5f7a",
+    "--color-accent": "#3949d1",
+    "--color-rule": "#e6e7ef",
+    "--color-code-bg": "#f1f2fa",
+    "--color-primary": "#3949d1",
+    "--color-success": "#2f9e6f",
+    "--color-warning": "#c9820a",
+    "--color-danger": "#d1394b",
+    "--color-heading": "#3949d1"
+  }
+}

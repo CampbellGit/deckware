@@ -1,0 +1,82 @@
+title: On-Prem to AWS Migration
+theme: minimal
+aspect: 16:9
+---
+```layout
+name: title
+```
+# On-Prem → AWS
+## Migration plan & 12-week roadmap {.muted}
+---
+```layout
+name: section
+```
+# Why we're moving
+---
+## The case for migration
+- Data-centre lease expires in **Q1 next year**
+- Capacity ceilings hit during peak load
+- Ops team spends 40% of time on hardware
+
+> Cloud lets us trade capex for elasticity. {.accent}
+
+??? Lead with the lease deadline — it's the forcing function.
+---
+```layout
+name: two-up
+```
+## Current state
+- 3 racks, 48 VMs
+- Oracle DB, on-prem
+- Manual deploys, weekly window
+
+![architecture](https://placehold.co/640x420/64748b/fff?text=On-Prem+Topology) {.right}
+---
+```layout
+name: two-up
+```
+## Target state
+- ECS Fargate + RDS
+- IaC via Terraform
+- CI/CD, deploy on merge
+
+![target](https://placehold.co/640x420/2563eb/fff?text=AWS+Target) {.right}
+---
+## Migration strategy: the 6 Rs
+- **Rehost** — lift & shift the 30 stateless VMs
+- **Replatform** — Oracle → RDS PostgreSQL
+- **Refactor** — the monolith billing service
+- **Retire** — 12 VMs no longer in use
+
+Sequenced low-risk first. {.muted}
+---
+```layout
+name: section
+```
+# 12-week roadmap
+---
+## Phased timeline
+| Phase | Weeks | Scope |
+| --- | --- | --- |
+| Foundation | 1–3 | Accounts, networking, Terraform |
+| Lift & shift | 4–7 | Rehost stateless workloads |
+| Data | 8–10 | DB migration + validation |
+| Cutover | 11–12 | DNS switch, decommission |
+---
+## Risks & mitigations
+- **Data loss** → dual-write + checksum validation
+- **Downtime** → blue/green cutover, instant rollback
+- **Cost overrun** → budget alarms, weekly review
+
+The cutover weekend is the single biggest risk. {.accent}
+---
+```layout
+name: quote
+```
+> If it isn't automated, it isn't migrated. {.huge}
+---
+```layout
+name: title
+```
+# Questions?
+## migration-team@example.com {.muted}

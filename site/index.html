@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>deckware — slides as light, LLM-friendly text</title>
+    <meta
+      name="description"
+      content="Write decks in an extended-markdown .slide format. Tiny, diffable, and reliably read and written by an LLM — a whole slide is ~60 tokens, not the ~10,000 a PowerPoint slide costs."
+    />
+    <link rel="icon" href="./favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --navy: #00003b;
+        --indigo: #3949d1;
+        --blue: #4a85f5;
+        --ink: #111114;
+        --muted: #5a5f7a;
+        --line: #e6e7ef;
+        --bg: #ffffff;
+        --radius: 14px;
+        --maxw: 1080px;
+      }
+      * { box-sizing: border-box; }
+      html { scroll-behavior: smooth; }
+      body {
+        margin: 0;
+        font-family: "Inter", system-ui, sans-serif;
+        color: var(--ink);
+        background: var(--bg);
+        line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+      }
+      h1, h2, h3 { font-family: "Josefin Sans", system-ui, sans-serif; line-height: 1.1; }
+      code, pre { font-family: "JetBrains Mono", ui-monospace, monospace; }
+      a { color: var(--indigo); text-decoration: none; }
+      a:hover { text-decoration: underline; }
+      .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 24px; }
+
+      /* Header */
+      header {
+        position: sticky; top: 0; z-index: 10;
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(10px);
+        border-bottom: 1px solid var(--line);
+      }
+      .nav {
+        display: flex; align-items: center; justify-content: space-between;
+        height: 60px;
+      }
+      .brand { font-family: "Josefin Sans"; font-weight: 700; font-size: 20px; letter-spacing: 0.3px; }
+      .brand .mark { color: var(--indigo); }
+      .nav-links { display: flex; gap: 22px; align-items: center; }
+      .nav-links a { color: var(--ink); font-weight: 500; font-size: 14px; }
+      .btn {
+        display: inline-block; padding: 10px 18px; border-radius: 8px;
+        font-weight: 600; font-size: 14px; transition: transform 0.1s, box-shadow 0.2s;
+      }
+      .btn-primary { background: var(--indigo); color: #fff; }
+      .btn-primary:hover { text-decoration: none; box-shadow: 0 8px 24px rgba(57, 73, 209, 0.35); transform: translateY(-1px); }
+      .btn-ghost { border: 1px solid var(--line); color: var(--ink); }
+      .btn-ghost:hover { text-decoration: none; border-color: var(--indigo); }
+
+      /* Hero */
+      .hero {
+        position: relative; overflow: hidden;
+        background:
+          radial-gradient(1200px 500px at 80% -10%, rgba(74, 133, 245, 0.18), transparent 60%),
+          radial-gradient(900px 500px at 10% 10%, rgba(57, 73, 209, 0.12), transparent 55%);
+        padding: 96px 0 72px;
+        text-align: center;
+      }
+      .hero h1 { font-size: clamp(40px, 7vw, 76px); font-weight: 700; margin: 0 0 18px; }
+      .hero .lede { font-size: clamp(18px, 2.4vw, 22px); color: var(--muted); max-width: 680px; margin: 0 auto 32px; }
+      .cta { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+      .pill {
+        display: inline-block; margin-bottom: 22px; padding: 6px 14px; border-radius: 999px;
+        background: rgba(57, 73, 209, 0.1); color: var(--indigo); font-weight: 600; font-size: 13px;
+      }
+
+      /* Token comparison bars */
+      .compare {
+        margin: 48px auto 0; max-width: 620px; text-align: left;
+        background: #fff; border: 1px solid var(--line); border-radius: var(--radius);
+        padding: 24px 26px; box-shadow: 0 12px 40px rgba(0, 0, 59, 0.06);
+      }
+      .compare h3 { margin: 0 0 4px; font-size: 16px; }
+      .compare .sub { color: var(--muted); font-size: 13px; margin: 0 0 18px; }
+      .bar-row { margin: 12px 0; }
+      .bar-label { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 5px; }
+      .bar-label b { font-variant-numeric: tabular-nums; }
+      .bar { height: 12px; border-radius: 6px; background: var(--line); overflow: hidden; }
+      .bar > span { display: block; height: 100%; border-radius: 6px; }
+      .bar.slide > span { width: 1%; background: var(--indigo); }
+      .bar.pptx > span { width: 12.5%; background: var(--blue); }
+      .bar.native > span { width: 100%; background: linear-gradient(90deg, var(--navy), var(--indigo)); }
+
+      /* Sections */
+      section { padding: 72px 0; }
+      section.alt { background: #fafbff; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+      .section-head { text-align: center; max-width: 680px; margin: 0 auto 48px; }
+      .section-head h2 { font-size: clamp(28px, 4vw, 40px); margin: 0 0 12px; }
+      .section-head p { color: var(--muted); font-size: 18px; margin: 0; }
+
+      .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
+      @media (max-width: 820px) { .grid { grid-template-columns: 1fr; } }
+      .card {
+        background: #fff; border: 1px solid var(--line); border-radius: var(--radius);
+        padding: 26px; transition: transform 0.15s, box-shadow 0.2s;
+      }
+      .card:hover { transform: translateY(-3px); box-shadow: 0 14px 40px rgba(0, 0, 59, 0.08); }
+      .card .ico { width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center;
+        background: rgba(57, 73, 209, 0.1); color: var(--indigo); margin-bottom: 14px; font-size: 20px; }
+      .card h3 { margin: 0 0 8px; font-size: 19px; }
+      .card p { margin: 0; color: var(--muted); font-size: 15px; }
+
+      /* Code sample */
+      .demo { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; align-items: center; }
+      @media (max-width: 820px) { .demo { grid-template-columns: 1fr; } }
+      pre.code {
+        background: var(--navy); color: #e6e8f5; border-radius: var(--radius);
+        padding: 22px 24px; overflow-x: auto; font-size: 13.5px; line-height: 1.7; margin: 0;
+        box-shadow: 0 16px 50px rgba(0, 0, 59, 0.2);
+      }
+      pre.code .k { color: #7aa2ff; }
+      pre.code .c { color: #8b93b5; }
+      pre.code .h { color: #ffd479; }
+      .demo-copy h2 { font-size: clamp(26px, 3.5vw, 34px); margin: 0 0 14px; }
+      .demo-copy p { color: var(--muted); font-size: 17px; }
+
+      /* Audience */
+      .aud { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+      @media (max-width: 820px) { .aud { grid-template-columns: 1fr; } }
+      .aud .card ul { margin: 12px 0 0; padding-left: 18px; color: var(--muted); font-size: 15px; }
+      .aud .card li { margin: 6px 0; }
+
+      /* Footer / CTA */
+      .final {
+        text-align: center;
+        background: linear-gradient(135deg, var(--navy), var(--indigo));
+        color: #fff; border-radius: 0;
+      }
+      .final h2 { color: #fff; font-size: clamp(28px, 4vw, 42px); margin: 0 0 14px; }
+      .final p { color: rgba(255, 255, 255, 0.8); font-size: 18px; margin: 0 0 28px; }
+      .final .btn-primary { background: #fff; color: var(--indigo); }
+      .final .btn-ghost { border-color: rgba(255, 255, 255, 0.4); color: #fff; }
+      footer { padding: 32px 0; color: var(--muted); font-size: 14px; text-align: center; }
+      footer a { color: var(--muted); }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="wrap nav">
+        <div class="brand"><span class="mark">▲</span> deckware</div>
+        <nav class="nav-links">
+          <a href="#why">Why</a>
+          <a href="#how">How</a>
+          <a href="#who">Who it's for</a>
+          <a class="btn btn-primary" href="./app/">Launch the app</a>
+        </nav>
+      </div>
+    </header>
+
+    <!-- HERO -->
+    <div class="hero">
+      <div class="wrap">
+        <span class="pill">Open source · MIT</span>
+        <h1>Slides as light,<br />LLM-friendly text.</h1>
+        <p class="lede">
+          Write a deck in an extended-markdown <code>.slide</code> format. See it
+          live, edit visually, and export to HTML, PDF, or PowerPoint. A whole
+          slide is <b>~60 tokens</b> — not the ~10,000 a real PowerPoint slide
+          costs an LLM to read or write.
+        </p>
+        <div class="cta">
+          <a class="btn btn-primary" href="./app/">Launch the app →</a>
+          <a class="btn btn-ghost" href="https://github.com/CampbellGit/deckware">View on GitHub</a>
+        </div>
+
+        <div class="compare">
+          <h3>Tokens per slide, for an LLM to read or write</h3>
+          <p class="sub">Lower is cheaper, faster, and more reliable. Measured with tiktoken — see the repo's <code>bench/</code>.</p>
+          <div class="bar-row">
+            <div class="bar-label"><span>deckware <code>.slide</code></span><b>~64</b></div>
+            <div class="bar slide"><span></span></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-label"><span>deckware’s exported <code>.pptx</code></span><b>~1,300</b></div>
+            <div class="bar pptx"><span></span></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-label"><span>a real human <code>.pptx</code></span><b>~10,200</b></div>
+            <div class="bar native"><span></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- WHY -->
+    <section id="why">
+      <div class="wrap">
+        <div class="section-head">
+          <h2>The format is the product</h2>
+          <p>
+            Content is markdown, layout is a small closed vocabulary, and there
+            is no raw-HTML escape hatch. That constraint is exactly what makes a
+            deck cheap to generate and safe to validate.
+          </p>
+        </div>
+        <div class="grid">
+          <div class="card">
+            <div class="ico">⚡</div>
+            <h3>20–160× lighter</h3>
+            <p>A <code>.slide</code> deck costs a fraction of the tokens of any PowerPoint — in or out. Feed whole decks to an LLM without blowing the context.</p>
+          </div>
+          <div class="card">
+            <div class="ico">✓</div>
+            <h3>Validatable &amp; repairable</h3>
+            <p>A closed grammar means a generated deck can be mechanically checked and fixed — a generate → validate → repair loop with no human in it.</p>
+          </div>
+          <div class="card">
+            <div class="ico">◆</div>
+            <h3>Never corrupts</h3>
+            <p>The worst a bad <code>.slide</code> does is warn and degrade gracefully. A malformed <code>.pptx</code> is a file PowerPoint refuses to open.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- HOW / DEMO -->
+    <section id="how" class="alt">
+      <div class="wrap demo">
+        <div class="demo-copy">
+          <h2>Readable by a human. Writable by a machine.</h2>
+          <p>
+            Front matter, <code>---</code> between slides, markdown for content,
+            and a tiny set of <code>{.hints}</code> and named layouts for design.
+            Icons are <code>:names:</code>. That's the whole language.
+          </p>
+          <p><a class="btn btn-ghost" href="https://github.com/CampbellGit/deckware/blob/main/FORMAT.md">Read the format spec →</a></p>
+        </div>
+        <pre class="code"><span class="c">title: Q3 Review
+theme: indigo</span>
+<span class="k">---</span>
+```layout
+name: title
+```
+<span class="h"># :rocket: Q3 Review</span>
+## Shipping faster than ever <span class="c">{.muted}</span>
+<span class="k">---</span>
+<span class="h">## Highlights</span>
+- :check: Revenue up 24% <span class="c">{.success}</span>
+- :zap: Latency cut in half
+- :users: 3 new enterprise logos
+<span class="k">---</span>
+```layout
+name: quote
+```
+&gt; If it isn't automated,
+&gt; it isn't shipped. <span class="c">{.huge}</span></pre>
+      </div>
+    </section>
+
+    <!-- WHO -->
+    <section id="who">
+      <div class="wrap">
+        <div class="section-head">
+          <h2>Built for two kinds of people</h2>
+          <p>Developers who live in text and git, and everyone who just needs a deck fast.</p>
+        </div>
+        <div class="aud">
+          <div class="card">
+            <div class="ico">&lt;/&gt;</div>
+            <h3>For developers</h3>
+            <ul>
+              <li>It's just markdown — write it in any editor</li>
+              <li>Plain text means real git diffs, PRs, code review</li>
+              <li>Editable in VS Code, versioned like source</li>
+              <li>A validator + parser you can script in CI</li>
+            </ul>
+          </div>
+          <div class="card">
+            <div class="ico">★</div>
+            <h3>For everyone else</h3>
+            <ul>
+              <li>Describe a deck to an LLM, get a deck</li>
+              <li>A live web editor with instant visual preview</li>
+              <li>Themes as simple config files — match your brand</li>
+              <li>Export to HTML, PDF, or PowerPoint when you're done</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FINAL CTA -->
+    <section class="final">
+      <div class="wrap">
+        <h2>Try it now — nothing to install</h2>
+        <p>The editor runs entirely in your browser.</p>
+        <div class="cta">
+          <a class="btn btn-primary" href="./app/">Launch the app →</a>
+          <a class="btn btn-ghost" href="https://github.com/CampbellGit/deckware">Star it on GitHub</a>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <div class="wrap">
+        deckware — open source under the
+        <a href="https://github.com/CampbellGit/deckware/blob/main/LICENSE">MIT license</a>.
+        · <a href="https://github.com/CampbellGit/deckware">GitHub</a>
+        · <a href="./app/">App</a>
+      </div>
+    </footer>
+  </body>
+</html>

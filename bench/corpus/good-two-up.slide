@@ -1,0 +1,9 @@
+theme: indigo
+---
+```layout
+name: two-up
+```
+## Left
+- one
+
+![x](images/photo.jpg) {.right}

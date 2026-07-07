@@ -10,6 +10,7 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+public_site
 *.local
 
 # Test artifacts
@@ -19,6 +20,17 @@ dist-ssr
 
 # Source brand templates (binary, not part of the codebase)
 *.pptx
+
+# Proprietary / client-derived assets — MUST NOT be published.
+# Brand images extracted from the client PowerPoint template, and the branded
+# example decks that reference them. Kept locally, excluded from the public repo.
+/examples/images/
+/examples/cloud-migration.slide
+/examples/java21-migration.slide
+/examples/deckware-proposal.slide
+
+# Benchmark artifacts (regenerable; may contain derived brand output)
+/bench/artifacts/
 
 # Editor directories and files
 .vscode/*

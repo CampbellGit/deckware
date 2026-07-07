@@ -1,0 +1,59 @@
+name: Deploy to GitHub Pages
+
+# Publish the app to GitHub Pages when a semver tag (v1.2.3) is pushed.
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+# Least-privilege permissions the Pages deploy needs.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Only one Pages deploy at a time; don't cancel an in-progress one.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      # Pages layout:
+      #   /            → the landing page (site/)
+      #   /app/        → the deckware editor (Vite build)
+      # The app is served from https://<user>.github.io/<repo>/app/, so its
+      # asset URLs must be prefixed accordingly.
+      - name: Build app
+        run: npm run build
+        env:
+          DEPLOY_BASE: /${{ github.event.repository.name }}/app/
+      - name: Assemble Pages site
+        run: |
+          mkdir -p public_site/app
+          cp -r site/* public_site/
+          cp -r dist/* public_site/app/
+          touch public_site/.nojekyll
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./public_site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

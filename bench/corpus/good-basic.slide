@@ -1,0 +1,12 @@
+title: Q
+theme: minimal
+---
+```layout
+name: title
+```
+# Hello
+## Sub {.muted}
+---
+## Points
+- a {.success}
+- b {.danger}
