@@ -1,16 +1,42 @@
-# deckware
+<h1 align="center">deckware</h1>
 
-Slides as light, LLM-friendly text. Write a deck in an extended markdown
-format (`.slide`), see it live in a browser editor, and export a self-contained
-HTML deck, a PDF, or an editable PowerPoint.
+<p align="center">
+  <b>Slides as light, LLM-friendly text.</b><br />
+  A whole slide is <b>~60 tokens</b>, not the <b>~10,000</b> a PowerPoint slide costs an LLM to read or write.
+</p>
 
-The bet: **the format is the product.** Decks are plain text — tiny, diffable,
+<p align="center">
+  <a href="https://campbellgit.github.io/deckware/"><b>Home</b></a> ·
+  <a href="https://campbellgit.github.io/deckware/app/"><b>Launch the app →</b></a> ·
+  <a href="./FORMAT.md">Format spec</a> ·
+  <a href="./bench">Benchmark</a>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT license" />
+  <img src="https://img.shields.io/github/actions/workflow/status/CampbellGit/deckware/ci.yml?branch=main" alt="CI" />
+</p>
+
+<!-- TODO: replace with a hero GIF — type markdown on the left, slides update
+     live, then hit Present. Record it from the live app (see LAUNCH notes).
+<p align="center"><img src="docs/hero.gif" alt="deckware demo" width="800" /></p>
+-->
+
+---
+
+Write a deck in an extended-markdown `.slide` format, see it live in a browser
+editor, edit it visually, and export a self-contained HTML deck, a PDF, or an
+editable PowerPoint.
+
+**The bet: the format is the product.** Decks are plain text — tiny, diffable,
 and reliably read/written by an LLM — because content is markdown, layout is a
-small closed vocabulary, and there is no raw-HTML escape hatch. A whole slide is
-~60 tokens instead of the ~10,000 a real `.pptx` slide costs an LLM to read or
-write (see [`bench/`](./bench)).
+small closed vocabulary, and there is no raw-HTML escape hatch. That's why a
+slide is ~60 tokens instead of ~10,000, and why an LLM can generate one without
+producing a corrupt file (see the [benchmark](./bench)).
 
-See [`FORMAT.md`](./FORMAT.md) for the full `.slide` spec.
+**Why it's different from Marp/Slidev:** the grammar is *closed and
+validatable*. An agent can generate → validate → repair a deck with no human in
+the loop, and a malformed deck degrades gracefully instead of failing to open.
 
 ## Quick start
 
