@@ -153,11 +153,46 @@ function renderSlide(
     placeQuote(s, slide, flat, fg);
     return;
   }
+  // Explicit `:::` columns override the named layout (matches HTML renderer).
+  if (slide.blocks.some((b) => b.column != null)) {
+    placeColumns(s, slide, flat, { headingColor, fg });
+    return;
+  }
   if (layout === "two-up") {
     placeTwoUp(s, slide, flat, { headingColor, fg });
     return;
   }
   placeDefault(s, slide, flat, { headingColor, fg });
+}
+
+/** Full-width blocks (heading) on top, then N equal columns. */
+function placeColumns(
+  s: ReturnType<Pptx["addSlide"]>,
+  slide: Slide,
+  flat: ReturnType<typeof flattenTheme>,
+  o: { headingColor: string; fg: string },
+) {
+  const full = slide.blocks.filter((b) => b.column == null);
+  const columned = slide.blocks.filter((b) => b.column != null);
+  const n = Math.max(...columned.map((b) => b.column!)) + 1;
+
+  // Full-width heading row at the top.
+  let top = MARGIN;
+  const heading = full.find((b) => b.type === "heading");
+  if (heading) {
+    s.addText(plain(heading.md), {
+      x: MARGIN, y: top, w: W - MARGIN * 2, h: 1.0,
+      fontSize: 30, bold: true, color: o.headingColor, fontFace: flat.headingFont,
+    });
+    top += 1.2;
+  }
+
+  const gap = 0.5;
+  const colW = (W - MARGIN * 2 - gap * (n - 1)) / n;
+  for (let c = 0; c < n; c++) {
+    const blocks = columned.filter((b) => b.column === c);
+    placeColumn(s, blocks, flat, o, { x: MARGIN + c * (colW + gap), w: colW }, top);
+  }
 }
 
 // --- Layout writers --------------------------------------------------------
@@ -269,6 +304,7 @@ function placeColumn(
   flat: ReturnType<typeof flattenTheme>,
   o: { headingColor: string; fg: string },
   box: { x: number; w: number },
+  top = MARGIN,
 ) {
   // An image block becomes a picture; otherwise text.
   const image = blocks.find((b) => b.type === "image");
@@ -276,13 +312,13 @@ function placeColumn(
     const url = imageUrl(image.md);
     const source = url ? imageSource(url) : null;
     if (source) {
-      s.addImage({ ...source, x: box.x, y: 1.6, w: box.w, h: 4.2, sizing: { type: "contain", w: box.w, h: 4.2 } });
+      s.addImage({ ...source, x: box.x, y: Math.max(top, 1.6), w: box.w, h: 4.2, sizing: { type: "contain", w: box.w, h: 4.2 } });
     }
     const textBlocks = blocks.filter((b) => b !== image);
-    if (textBlocks.length) addColumnText(s, textBlocks, flat, o, box);
+    if (textBlocks.length) addColumnText(s, textBlocks, flat, o, box, top);
     return;
   }
-  addColumnText(s, blocks, flat, o, box);
+  addColumnText(s, blocks, flat, o, box, top);
 }
 
 function addColumnText(
@@ -291,10 +327,11 @@ function addColumnText(
   flat: ReturnType<typeof flattenTheme>,
   o: { headingColor: string; fg: string },
   box: { x: number; w: number },
+  top = MARGIN,
 ) {
   const heading = blocks.find((b) => b.type === "heading");
   const body = blocks.filter((b) => b !== heading);
-  let y = MARGIN;
+  let y = top;
   if (heading) {
     s.addText(plain(heading.md), {
       x: box.x, y, w: box.w, h: 1.0,

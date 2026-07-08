@@ -115,13 +115,28 @@ function defaultAlign(layout: string): string {
 function layoutBody(slide: Slide, opts: RenderOptions): string {
   // Carry each block's original index so selection survives column routing.
   const indexed = slide.blocks.map((block, i) => ({ block, i }));
+  const col = (items: typeof indexed) =>
+    `<div class="col">${items
+      .map(({ block, i }) => renderBlock(block, i, opts))
+      .join("")}</div>`;
+
+  // Explicit columns via `:::` separators take precedence over any layout.
+  // Blocks with no column (before the first `:::`) render full-width above the
+  // column row; columned blocks are grouped into equal columns.
+  if (indexed.some(({ block }) => block.column != null)) {
+    const full = indexed.filter(({ block }) => block.column == null);
+    const columned = indexed.filter(({ block }) => block.column != null);
+    const n = Math.max(...columned.map(({ block }) => block.column!)) + 1;
+    const cols = Array.from({ length: n }, (_, c) =>
+      col(columned.filter(({ block }) => block.column === c)),
+    );
+    const head = full.map(({ block, i }) => renderBlock(block, i, opts)).join("");
+    return head + `<div class="cols cols-${n}">${cols.join("")}</div>`;
+  }
+
   if (slide.layout.name === "two-up") {
     const left = indexed.filter(({ block }) => !block.hints.includes("right"));
     const right = indexed.filter(({ block }) => block.hints.includes("right"));
-    const col = (items: typeof indexed) =>
-      `<div class="col">${items
-        .map(({ block, i }) => renderBlock(block, i, opts))
-        .join("")}</div>`;
     return col(left) + col(right);
   }
   return indexed.map(({ block, i }) => renderBlock(block, i, opts)).join("");
@@ -262,6 +277,11 @@ export function deckStylesheet(deck: Deck): string {
 /* Layout: two-up */
 .deck .layout-two-up .slide-content { flex-direction: row; gap: var(--space-lg); align-items: center; }
 .deck .layout-two-up .col { flex: 1; display: flex; flex-direction: column; gap: var(--space-md); min-width: 0; }
+
+/* Columns via ::: separators. The .cols row sits inside .slide-content and
+   splits available width into equal columns. */
+.deck .cols { display: flex; flex-direction: row; gap: var(--space-lg); width: 100%; align-items: flex-start; }
+.deck .cols .col { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: var(--space-md); }
 
 /* Layout: title / section / quote — emphasis handled via align-center */
 .deck .layout-title h1 { font-size: calc(var(--type-h1) * 1.15); }

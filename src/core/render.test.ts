@@ -128,3 +128,13 @@ describe("deckStylesheet", () => {
     expect(sheet).toContain(".h-huge :is(p, blockquote, li)");
   });
 });
+
+describe("columns", () => {
+  it("renders :::-separated content into equal-width columns", () => {
+    const [s] = render(`theme: minimal\n---\n## Head\n:::\nleft\n:::\nright`);
+    expect(s.html).toContain('class="cols cols-2"');
+    expect((s.html.match(/class="col"/g) || []).length).toBe(2);
+    // full-width heading sits outside the .cols row
+    expect(s.html).toContain("<h2");
+  });
+});

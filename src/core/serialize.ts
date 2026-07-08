@@ -43,7 +43,7 @@ function serializeSlide(slide: Slide): string {
   const layoutBlock = serializeLayout(slide);
   if (layoutBlock) lines.push(layoutBlock);
 
-  const body = slide.blocks.map(serializeBlock).join("\n\n");
+  const body = serializeBody(slide.blocks);
   if (body) lines.push(body);
 
   if (slide.notes) {
@@ -56,6 +56,32 @@ function serializeSlide(slide: Slide): string {
   }
 
   return lines.join("\n\n");
+}
+
+/**
+ * Serialize a slide's blocks, inserting a `:::` separator between column groups
+ * when the blocks carry `column` indices. Blocks without a column are treated
+ * as a single (column 0) group, so normal slides are unaffected.
+ */
+function serializeBody(blocks: Slide["blocks"]): string {
+  const columned = blocks.filter((b) => b.column != null);
+  if (columned.length === 0) {
+    return blocks.map(serializeBlock).join("\n\n");
+  }
+  // Full-width blocks (no column) come first, then `:::`-separated columns.
+  const full = blocks.filter((b) => b.column == null);
+  const n = Math.max(...columned.map((b) => b.column!)) + 1;
+  const groups: string[] = [];
+  if (full.length) groups.push(full.map(serializeBlock).join("\n\n"));
+  for (let c = 0; c < n; c++) {
+    groups.push(
+      columned
+        .filter((b) => b.column === c)
+        .map(serializeBlock)
+        .join("\n\n"),
+    );
+  }
+  return groups.join("\n\n:::\n\n");
 }
 
 /** Emit a ```layout block, but only when the slide isn't a plain default. */

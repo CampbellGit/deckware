@@ -152,6 +152,28 @@ visually consistent and re-themes cleanly — there are no raw hex values.
 
 Unknown hints are ignored (and surfaced as a warning by the parser).
 
+### Columns
+
+A line of exactly `:::` splits a slide into side-by-side columns — ideal for
+comparisons, before/after, or multi-point slides. Content **before** the first
+`:::` spans the full width (e.g. a slide heading); each `:::`-separated chunk
+after it becomes one equal-width column. Two or three columns work best.
+
+```
+## Build vs Buy
+:::
+### Build
+- Full control
+- Higher upfront cost {.warning}
+:::
+### Buy
+- Fast to launch {.success}
+- Predictable pricing
+```
+
+Columns are just normal content, so headings, lists, images, and hints all work
+inside them. Omit the leading full-width block if you want columns only.
+
 ### Icons
 
 Write `:icon-name:` anywhere in inline text. It expands to an inline SVG that

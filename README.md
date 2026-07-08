@@ -101,6 +101,18 @@ Hints (the COMPLETE list — never invent others):
 Per-bullet hints work: `- shipped {.success}` colours just that item.
 Colours resolve to the theme palette — do NOT use raw hex in hints.
 
+# Columns
+A line of exactly `:::` splits a slide into side-by-side columns (use 2 or 3).
+Content before the first `:::` spans full width (e.g. a heading); each chunk
+after it is one column. Great for comparisons / before-after.
+  ## Build vs Buy
+  :::
+  ### Build
+  - Full control
+  :::
+  ### Buy
+  - Fast to launch {.success}
+
 # Icons
 Write `:name:` in text; it becomes an inline icon matching text colour/size.
 Valid names ONLY: cloud, server, database, network, lock, shield, rocket,

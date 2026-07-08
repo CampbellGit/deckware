@@ -65,6 +65,11 @@ export interface Block {
   hints: Hint[];
   /** For headings: the level (1–6). Undefined otherwise. */
   level?: number;
+  /**
+   * Column index (0-based) when the slide is split into columns with `:::`
+   * separators. Undefined for single-column (normal) slides.
+   */
+  column?: number;
 }
 
 export type BlockType =

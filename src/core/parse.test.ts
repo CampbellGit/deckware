@@ -170,3 +170,23 @@ describe("speaker notes", () => {
     expect(deck.slides[0].notes).toBeUndefined();
   });
 });
+
+describe("columns (::: separators)", () => {
+  it("tags blocks after ::: with 0-based column indices", () => {
+    const { deck } = parse(`theme: minimal\n---\n## Head\n:::\nleft\n:::\nright`);
+    const b = deck.slides[0].blocks;
+    expect(b[0].column).toBeUndefined(); // full-width heading
+    expect(b[1].column).toBe(0);
+    expect(b[2].column).toBe(1);
+  });
+
+  it("leaves column undefined on slides without :::", () => {
+    const { deck } = parse(`theme: minimal\n---\n# Hi\n- a`);
+    expect(deck.slides[0].blocks.every((b) => b.column === undefined)).toBe(true);
+  });
+
+  it("supports three columns", () => {
+    const { deck } = parse(`theme: minimal\n---\n:::\na\n:::\nb\n:::\nc`);
+    expect(deck.slides[0].blocks.map((b) => b.column)).toEqual([0, 1, 2]);
+  });
+});

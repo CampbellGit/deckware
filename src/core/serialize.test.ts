@@ -79,3 +79,12 @@ describe("round-trip stability", () => {
     expect(text).toContain("***");
   });
 });
+
+describe("columns round-trip", () => {
+  it("re-emits ::: separators and stays stable", () => {
+    const src = `theme: minimal\n---\n## Head\n:::\nleft\n:::\nright`;
+    const once = serialize(parse(src).deck);
+    expect(once).toContain(":::");
+    expect(serialize(parse(once).deck)).toBe(once);
+  });
+});

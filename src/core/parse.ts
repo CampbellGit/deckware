@@ -153,23 +153,44 @@ function extractNotes(src: string): { notes?: string; rest: string } {
   return { notes: notes || undefined, rest: keptLines.join("\n") };
 }
 
-/** Lex markdown and convert tokens into semantic Blocks. */
+/**
+ * Lex markdown and convert tokens into semantic Blocks.
+ *
+ * A line of exactly `:::` splits the slide into columns. Content BEFORE the
+ * first `:::` is full-width (spans all columns — e.g. a slide heading); each
+ * `:::`-separated chunk after it is one column. Blocks in a column get a
+ * 0-based `column` index; full-width blocks (and normal single-column slides)
+ * leave `column` undefined.
+ *
+ *   ## Heading            ← full-width (column undefined)
+ *   :::
+ *   left column           ← column 0
+ *   :::
+ *   right column          ← column 1
+ */
 function parseBlocks(
   src: string,
   index: number,
   warnings: ParseWarning[],
 ): Block[] {
-  const tokens = new Lexer().lex(src);
+  const chunks = src.split(/^[ \t]*:::[ \t]*$/m);
+  const hasColumns = chunks.length > 1;
   const blocks: Block[] = [];
-  for (const token of tokens) {
-    const block = tokenToBlock(token, index, warnings);
-    if (block) {
-      // Expand :icon: tokens in the rendered HTML only — `md` stays clean so
-      // the source round-trips and remains human/LLM-readable.
-      block.html = expandIcons(block.html);
-      blocks.push(block);
+  chunks.forEach((chunkSrc, i) => {
+    // With separators present, the first chunk is full-width; chunks 1..n are
+    // columns 0..n-1.
+    const column = !hasColumns || i === 0 ? undefined : i - 1;
+    for (const token of new Lexer().lex(chunkSrc)) {
+      const block = tokenToBlock(token, index, warnings);
+      if (block) {
+        // Expand :icon: tokens in the rendered HTML only — `md` stays clean so
+        // the source round-trips and remains human/LLM-readable.
+        block.html = expandIcons(block.html);
+        if (column != null) block.column = column;
+        blocks.push(block);
+      }
     }
-  }
+  });
   return blocks;
 }
 
