@@ -77,9 +77,10 @@ function renderSlide(
     if (isDark(spec.color)) { fg = "FFFFFF"; forcedLight = true; }
   } else if (spec?.kind === "image" && spec.url) {
     // Locally-picked images resolve to an embeddable data URL; otherwise the
-    // path/URL is used as-is. pptxgenjs accepts either via `path`.
+    // path/URL is used as-is. pptxgenjs needs `data` for data URLs and `path`
+    // for real paths/URLs — passing a data URL as `path` throws ENAMETOOLONG.
     const resolved = RESOLVE_IMAGE?.(spec.url) ?? spec.url;
-    s.background = { path: resolved };
+    s.background = imageSource(resolved);
     if (spec.dim >= 0.15) { fg = "FFFFFF"; forcedLight = true; }
   } else {
     s.background = { color: hex(flat.bg) };
@@ -222,7 +223,7 @@ function placeColumn(
   if (image) {
     const url = imageUrl(image.md);
     if (url) {
-      s.addImage({ path: url, x: box.x, y: 1.6, w: box.w, h: 4.2, sizing: { type: "contain", w: box.w, h: 4.2 } });
+      s.addImage({ ...imageSource(url), x: box.x, y: 1.6, w: box.w, h: 4.2, sizing: { type: "contain", w: box.w, h: 4.2 } });
     }
     const textBlocks = blocks.filter((b) => b !== image);
     if (textBlocks.length) addColumnText(s, textBlocks, flat, o, box);
@@ -273,7 +274,7 @@ function addBodyRegion(
       }
     } else if (b.type === "image") {
       const url = imageUrl(b.md);
-      if (url) s.addImage({ path: url, x: box.x, y: box.y, w: box.w, h: box.h, sizing: { type: "contain", w: box.w, h: box.h } });
+      if (url) s.addImage({ ...imageSource(url), x: box.x, y: box.y, w: box.w, h: box.h, sizing: { type: "contain", w: box.w, h: box.h } });
     } else {
       runs.push({
         text: plain(b.md),
@@ -331,6 +332,12 @@ function imageUrl(md: string): string | null {
   if (!m) return null;
   // Locally-picked images resolve to an embeddable data URL; else use as-is.
   return RESOLVE_IMAGE?.(m[1]) ?? m[1];
+}
+
+/** pptxgenjs image source: a data URL must be passed as `data`, a real
+ *  path/URL as `path`. Passing a data URL as `path` throws ENAMETOOLONG. */
+function imageSource(url: string): { data: string } | { path: string } {
+  return /^data:/i.test(url) ? { data: url } : { path: url };
 }
 
 function hex(color: string): string {

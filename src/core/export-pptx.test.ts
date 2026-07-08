@@ -60,4 +60,21 @@ describe("exportPptx", () => {
     expect(xml).toContain("00003B"); // navy bg
     expect(xml).toContain("FFFFFF"); // white text
   });
+
+  it("embeds a data-URL image background (must not be treated as a file path)", async () => {
+    // Regression: pptxgenjs threw ENAMETOOLONG because a data URL was passed as
+    // `path`. Data URLs must go through `data`. A 1x1 transparent PNG:
+    const png =
+      "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+    const deck = parse(
+      `theme: indigo\n---\n\`\`\`layout\nname: title\nbg: image(pic.png)\n\`\`\`\n# Hi`,
+    ).deck;
+    const blob = await exportPptx(deck, { resolveImage: () => png });
+    const zip = await JSZip.loadAsync(await blob.arrayBuffer());
+    // The image is embedded as a media part in the package.
+    const media = Object.keys(zip.files).filter((f) =>
+      /^ppt\/media\/.*\.(png|jpe?g)$/i.test(f),
+    );
+    expect(media.length).toBeGreaterThan(0);
+  });
 });
