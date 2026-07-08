@@ -10,6 +10,7 @@ import { reorderBlock } from "./core/edits";
 import { slideAtLine, slideRanges } from "./core/source-map";
 import { useFileWatch } from "./ui/useFileWatch";
 import { resolveAssetData } from "./ui/assets";
+import { svgToPng } from "./ui/raster";
 import type { Deck } from "./core/ir";
 import { SAMPLE } from "./sample";
 import "./App.css";
@@ -117,7 +118,10 @@ export default function App() {
 
   async function exportDeckPptx() {
     const name = (deck.meta.title ?? "deck").replace(/\s+/g, "-").toLowerCase();
-    const blob = await exportPptx(deck, { resolveImage: resolveAssetData });
+    const blob = await exportPptx(deck, {
+      resolveImage: resolveAssetData,
+      rasterizeSvg: (src) => svgToPng(src),
+    });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;

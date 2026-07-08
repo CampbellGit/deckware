@@ -25,16 +25,57 @@ export interface ExportPptxOptions {
   /** Resolve an image reference (e.g. a locally-picked filename) to an
    *  embeddable data URL / URL so the PPTX contains the picture. */
   resolveImage?: (ref: string) => string | undefined;
+  /** Rasterize an SVG source to a PNG data URL. PowerPoint has no SVG support,
+   *  so SVG backgrounds/figures must be converted to bitmaps first. Async;
+   *  runs during the pre-pass before slides are built. */
+  rasterizeSvg?: (src: string) => Promise<string>;
 }
 
-/** Module-scoped resolver, set per export() call and read by the image spots. */
+/** Module-scoped resolver, set per export() call and read by the image spots.
+ *  It already folds in SVG→PNG results from the async pre-pass. */
 let RESOLVE_IMAGE: ((ref: string) => string | undefined) | undefined;
+
+/** Collect every image reference used in the deck (backgrounds + inline). */
+function collectImageRefs(deck: Deck): string[] {
+  const refs = new Set<string>();
+  const bg = (v?: string) => {
+    const m = v?.match(/^image\(\s*(.+?)\s*\)$/i);
+    if (m) refs.add(m[1].replace(/^['"]|['"]$/g, ""));
+  };
+  bg(deck.meta.bg);
+  for (const slide of deck.slides) {
+    bg(slide.layout.bg);
+    for (const b of slide.blocks) {
+      const m = b.md.match(/!\[[^\]]*\]\(([^)]*)\)/);
+      if (m) refs.add(m[1]);
+    }
+  }
+  return [...refs];
+}
 
 export async function exportPptx(
   deck: Deck,
   opts: ExportPptxOptions = {},
 ): Promise<Blob> {
-  RESOLVE_IMAGE = opts.resolveImage;
+  // Pre-pass: resolve every image ref, and rasterize any SVG to PNG (PowerPoint
+  // can't render SVG). Build a ref → embeddable-source map the sync renderer
+  // reads via RESOLVE_IMAGE.
+  const resolved = new Map<string, string>();
+  for (const ref of collectImageRefs(deck)) {
+    let src = opts.resolveImage?.(ref) ?? ref;
+    if (opts.rasterizeSvg && isSvgSource(src)) {
+      try {
+        src = await opts.rasterizeSvg(src);
+      } catch {
+        // Rasterization failed (e.g. cross-origin) — drop the SVG rather than
+        // embed bytes PowerPoint can't display.
+        continue;
+      }
+    }
+    resolved.set(ref, src);
+  }
+  RESOLVE_IMAGE = (ref: string) => resolved.get(ref) ?? opts.resolveImage?.(ref) ?? ref;
+
   // Dynamic import keeps pptxgenjs out of the initial bundle.
   const mod = await import("pptxgenjs");
   const PptxGen = mod.default;
@@ -52,6 +93,11 @@ export async function exportPptx(
 
   // Output as a Blob so the caller can trigger a download.
   return (await pptx.write({ outputType: "blob" })) as Blob;
+}
+
+/** True for an SVG source: a data: URL or a path ending in .svg. */
+function isSvgSource(src: string): boolean {
+  return /^data:image\/svg\+xml/i.test(src) || /\.svg(\?|#|$)/i.test(src);
 }
 
 function renderSlide(
@@ -80,8 +126,14 @@ function renderSlide(
     // path/URL is used as-is. pptxgenjs needs `data` for data URLs and `path`
     // for real paths/URLs — passing a data URL as `path` throws ENAMETOOLONG.
     const resolved = RESOLVE_IMAGE?.(spec.url) ?? spec.url;
-    s.background = imageSource(resolved);
-    if (spec.dim >= 0.15) { fg = "FFFFFF"; forcedLight = true; }
+    const source = imageSource(resolved);
+    if (source) {
+      s.background = source;
+      if (spec.dim >= 0.15) { fg = "FFFFFF"; forcedLight = true; }
+    } else {
+      // Unusable image (e.g. an un-rasterized SVG) — fall back to a solid fill.
+      s.background = { color: hex(flat.bg) };
+    }
   } else {
     s.background = { color: hex(flat.bg) };
   }
@@ -222,8 +274,9 @@ function placeColumn(
   const image = blocks.find((b) => b.type === "image");
   if (image) {
     const url = imageUrl(image.md);
-    if (url) {
-      s.addImage({ ...imageSource(url), x: box.x, y: 1.6, w: box.w, h: 4.2, sizing: { type: "contain", w: box.w, h: 4.2 } });
+    const source = url ? imageSource(url) : null;
+    if (source) {
+      s.addImage({ ...source, x: box.x, y: 1.6, w: box.w, h: 4.2, sizing: { type: "contain", w: box.w, h: 4.2 } });
     }
     const textBlocks = blocks.filter((b) => b !== image);
     if (textBlocks.length) addColumnText(s, textBlocks, flat, o, box);
@@ -274,7 +327,8 @@ function addBodyRegion(
       }
     } else if (b.type === "image") {
       const url = imageUrl(b.md);
-      if (url) s.addImage({ ...imageSource(url), x: box.x, y: box.y, w: box.w, h: box.h, sizing: { type: "contain", w: box.w, h: box.h } });
+      const source = url ? imageSource(url) : null;
+      if (source) s.addImage({ ...source, x: box.x, y: box.y, w: box.w, h: box.h, sizing: { type: "contain", w: box.w, h: box.h } });
     } else {
       runs.push({
         text: plain(b.md),
@@ -335,8 +389,11 @@ function imageUrl(md: string): string | null {
 }
 
 /** pptxgenjs image source: a data URL must be passed as `data`, a real
- *  path/URL as `path`. Passing a data URL as `path` throws ENAMETOOLONG. */
-function imageSource(url: string): { data: string } | { path: string } {
+ *  path/URL as `path`. Passing a data URL as `path` throws ENAMETOOLONG.
+ *  Returns null for SVG sources (PowerPoint can't render SVG; these should
+ *  have been rasterized in the pre-pass — if not, skip rather than embed). */
+function imageSource(url: string): { data: string } | { path: string } | null {
+  if (isSvgSource(url)) return null;
   return /^data:/i.test(url) ? { data: url } : { path: url };
 }
 

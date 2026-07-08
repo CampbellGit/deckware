@@ -77,4 +77,44 @@ describe("exportPptx", () => {
     );
     expect(media.length).toBeGreaterThan(0);
   });
+
+  it("rasterizes an SVG background to PNG (PowerPoint has no SVG support)", async () => {
+    const svg =
+      "data:image/svg+xml;base64," +
+      Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"/>').toString("base64");
+    const png =
+      "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+    const deck = parse(
+      `theme: indigo\n---\n\`\`\`layout\nname: title\nbg: image(bg.svg)\n\`\`\`\n# Hi`,
+    ).deck;
+    let asked = "";
+    const blob = await exportPptx(deck, {
+      resolveImage: () => svg,
+      rasterizeSvg: async (src) => {
+        asked = src;
+        return png;
+      },
+    });
+    // The SVG source was handed to the rasterizer...
+    expect(asked).toBe(svg);
+    // ...and a PNG (not SVG) media part is embedded.
+    const zip = await JSZip.loadAsync(await blob.arrayBuffer());
+    const media = Object.keys(zip.files).filter((f) => /^ppt\/media\//.test(f));
+    expect(media.some((f) => /\.png$/i.test(f))).toBe(true);
+    expect(media.some((f) => /\.svg$/i.test(f))).toBe(false);
+  });
+
+  it("falls back to a solid background when an SVG can't be rasterized", async () => {
+    const svg =
+      "data:image/svg+xml;base64," +
+      Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"/>').toString("base64");
+    const deck = parse(
+      `theme: indigo\n---\n\`\`\`layout\nname: title\nbg: image(bg.svg)\n\`\`\`\n# Hi`,
+    ).deck;
+    // No rasterizeSvg hook → the SVG must NOT be embedded as (unreadable) bytes.
+    const blob = await exportPptx(deck, { resolveImage: () => svg });
+    const zip = await JSZip.loadAsync(await blob.arrayBuffer());
+    const media = Object.keys(zip.files).filter((f) => /^ppt\/media\/.+/.test(f));
+    expect(media).toHaveLength(0);
+  });
 });
