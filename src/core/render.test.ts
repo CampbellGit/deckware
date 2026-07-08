@@ -121,11 +121,17 @@ describe("deckStylesheet", () => {
     expect(sheet).toMatch(/\.slide-content\s*\{[^}]*padding:/);
   });
 
-  it("cascades size hints into inner p/blockquote/li", () => {
-    // Regression: {.huge} on a quote/list wrapper must reach the inner text,
-    // which otherwise picks up the base font-size rule.
+  it("implements size hints as inherited font-size multipliers", () => {
+    // Size hints scale relative to an element's natural size (so {.large} makes
+    // a heading larger, not smaller). They set --fs-mult, which the element
+    // font-size rules multiply; the variable inherits into inner p/li/quote.
     const sheet = deckStylesheet(parse(`theme: minimal\n---\n# Hi`).deck);
-    expect(sheet).toContain(".h-huge :is(p, blockquote, li)");
+    expect(sheet).toContain(".h-large { --fs-mult: 1.4; }");
+    expect(sheet).toContain(".h-huge { --fs-mult: 2;");
+    expect(sheet).toContain(".h-small { --fs-mult: 0.72; }");
+    // Elements multiply their base size by the (inherited) hint factor.
+    expect(sheet).toContain("var(--type-base) * var(--fs-mult, 1)");
+    expect(sheet).toContain("var(--type-h2) * var(--fs-mult, 1)");
   });
 });
 

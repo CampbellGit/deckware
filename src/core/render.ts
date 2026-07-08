@@ -247,11 +247,11 @@ export function deckStylesheet(deck: Deck): string {
   font-family: var(--font-heading, var(--font-body));
   color: var(--color-heading, var(--color-fg));
 }
-.deck .slide h1 { font-size: var(--type-h1); line-height: 1.05; margin: 0; font-weight: 700; }
-.deck .slide h2 { font-size: var(--type-h2); line-height: 1.1; margin: 0; font-weight: 650; }
-.deck .slide h3 { font-size: var(--type-h3); margin: 0; font-weight: 600; }
-.deck .slide p { font-size: var(--type-base); line-height: 1.4; margin: 0; }
-.deck .slide ul, .deck .slide ol { font-size: var(--type-base); line-height: 1.5; margin: 0; padding-left: 1.2em; }
+.deck .slide h1 { font-size: calc(var(--type-h1) * var(--fs-mult, 1)); line-height: 1.05; margin: 0; font-weight: 700; }
+.deck .slide h2 { font-size: calc(var(--type-h2) * var(--fs-mult, 1)); line-height: 1.1; margin: 0; font-weight: 650; }
+.deck .slide h3 { font-size: calc(var(--type-h3) * var(--fs-mult, 1)); margin: 0; font-weight: 600; }
+.deck .slide p { font-size: calc(var(--type-base) * var(--fs-mult, 1)); line-height: 1.4; margin: 0; }
+.deck .slide ul, .deck .slide ol { font-size: calc(var(--type-base) * var(--fs-mult, 1)); line-height: 1.5; margin: 0; padding-left: 1.2em; }
 .deck .slide li { margin: 0.15em 0; }
 .deck .slide a { color: var(--color-accent); }
 .deck .slide img { max-width: 100%; max-height: 100%; display: block; border-radius: 4px; }
@@ -264,6 +264,7 @@ export function deckStylesheet(deck: Deck): string {
   margin: 0; padding-left: var(--space-md);
   border-left: 4px solid var(--color-accent);
   font-style: italic;
+  font-size: calc(var(--type-base) * var(--fs-mult, 1));
 }
 .deck .slide pre {
   background: var(--color-code-bg); border-radius: 6px;
@@ -285,17 +286,18 @@ export function deckStylesheet(deck: Deck): string {
 
 /* Layout: title / section / quote — emphasis handled via align-center */
 .deck .layout-title h1 { font-size: calc(var(--type-h1) * 1.15); }
-.deck .layout-section h1, .deck .layout-section h2 { font-size: calc(var(--type-h1) * 1.35); }
-.deck .layout-quote blockquote { border: none; font-size: var(--type-large); padding: 0; }
+.deck .layout-section h1, .deck .layout-section h2 { font-size: calc(var(--type-h1) * 1.35 * var(--fs-mult, 1)); }
+.deck .layout-quote blockquote { border: none; font-size: calc(var(--type-large) * var(--fs-mult, 1)); padding: 0; }
 
 /* Hint vocabulary.
-   Size hints also cascade into inner p/blockquote/li, because list and quote
-   blocks carry the hint on a wrapper while their text lives in a child element
-   that would otherwise pick up the base font-size rule. The extra .slide in the
-   selector also lets size hints win over layout-specific element rules. */
-.deck .slide .h-small, .deck .slide .h-small :is(p, blockquote, li) { font-size: var(--type-small); }
-.deck .slide .h-large, .deck .slide .h-large :is(p, blockquote, li) { font-size: var(--type-large); }
-.deck .slide .h-huge, .deck .slide .h-huge :is(p, blockquote, li) { font-size: var(--type-huge); line-height: 1.1; }
+   Size hints are *multipliers* (--fs-mult), not absolute sizes, so they scale
+   whatever they're applied to relative to its natural size — a {.large}
+   heading gets larger, not smaller. The variable is inherited, so a hint on a
+   list/quote wrapper flows into the inner p/li/blockquote automatically. Every
+   text element multiplies its base size by var(--fs-mult, 1) below. */
+.deck .slide .h-small { --fs-mult: 0.72; }
+.deck .slide .h-large { --fs-mult: 1.4; }
+.deck .slide .h-huge { --fs-mult: 2; line-height: 1.1; }
 /* Colour hints. The .slide prefix raises specificity so a colour hint wins
    over the default heading colour (--color-heading) on h1/h2/h3. */
 .deck .slide .h-muted { color: var(--color-muted); }

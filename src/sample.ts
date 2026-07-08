@@ -38,6 +38,18 @@ name: section
 
 That is the whole vocabulary. {.muted}
 ---
+## Columns with \`:::\`
+:::
+### Build
+- Full control
+- Higher upfront cost {.warning}
+:::
+### Buy
+- Fast to launch {.success}
+- Less customisation
+
+A line of \`:::\` splits a slide into columns. {.muted}
+---
 \`\`\`layout
 name: quote
 \`\`\`
