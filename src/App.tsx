@@ -134,7 +134,7 @@ export default function App() {
     <div className="app">
       <header className="topbar">
         <div className="brand">
-          deckware <span className="tag">v0</span>
+          deckware <span className="tag" title="Deployed version">v{__APP_VERSION__}</span>
         </div>
         <div className="actions">
           {warnings.length > 0 && (
